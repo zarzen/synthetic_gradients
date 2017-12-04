@@ -1,0 +1,29 @@
+// define grpc services for numpy matrics exchange
+
+
+syntax = "proto3";
+
+
+package nn;
+
+service LayerDataExchange {
+  // get layer inputs
+  rpc SendInput (ForwardMsg) returns (PlainResponse) {}
+
+  // get backward deltas
+  rpc BackwardDelta (BackwardMsg) returns (PlainResponse) {}
+}
+
+message ForwardMsg {
+  int32 batch_id = 1;
+  bytes output_matrix = 2;
+}
+
+message BackwardMsg {
+  int32 batch_id = 1;
+  bytes delta_matrix = 2;
+}
+
+message PlainResponse {
+  string message = 1;
+}
