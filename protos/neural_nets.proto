@@ -7,21 +7,25 @@ syntax = "proto3";
 package nn;
 
 service LayerDataExchange {
-  // get layer inputs
-  rpc SendInput (ForwardMsg) returns (PlainResponse) {}
+  // invoked by lower layer
+  rpc UpdateInput (ForwardMsg) returns (PlainResponse) {}
 
-  // get backward deltas
-  rpc BackwardDelta (BackwardMsg) returns (PlainResponse) {}
+  // backward deltas; invoked by upper layer to pass through error delta
+  rpc UpdateDelta (BackwardMsg) returns (PlainResponse) {}
+
 }
 
 message ForwardMsg {
   int32 batch_id = 1;
   bytes output_matrix = 2;
+  bytes labels = 3;
+  bool is_train = 4; // if is train; no need for back propagate
 }
 
 message BackwardMsg {
   int32 batch_id = 1;
   bytes delta_matrix = 2;
+  bytes labels = 3;
 }
 
 message PlainResponse {

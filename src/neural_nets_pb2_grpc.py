@@ -14,13 +14,13 @@ class LayerDataExchangeStub(object):
     Args:
       channel: A grpc.Channel.
     """
-    self.SendInput = channel.unary_unary(
-        '/nn.LayerDataExchange/SendInput',
+    self.UpdateInput = channel.unary_unary(
+        '/nn.LayerDataExchange/UpdateInput',
         request_serializer=neural__nets__pb2.ForwardMsg.SerializeToString,
         response_deserializer=neural__nets__pb2.PlainResponse.FromString,
         )
-    self.BackwardDelta = channel.unary_unary(
-        '/nn.LayerDataExchange/BackwardDelta',
+    self.UpdateDelta = channel.unary_unary(
+        '/nn.LayerDataExchange/UpdateDelta',
         request_serializer=neural__nets__pb2.BackwardMsg.SerializeToString,
         response_deserializer=neural__nets__pb2.PlainResponse.FromString,
         )
@@ -30,15 +30,15 @@ class LayerDataExchangeServicer(object):
   # missing associated documentation comment in .proto file
   pass
 
-  def SendInput(self, request, context):
-    """get layer inputs
+  def UpdateInput(self, request, context):
+    """invoked by lower layer
     """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def BackwardDelta(self, request, context):
-    """get backward deltas
+  def UpdateDelta(self, request, context):
+    """backward deltas; invoked by upper layer to pass through error delta
     """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
@@ -47,13 +47,13 @@ class LayerDataExchangeServicer(object):
 
 def add_LayerDataExchangeServicer_to_server(servicer, server):
   rpc_method_handlers = {
-      'SendInput': grpc.unary_unary_rpc_method_handler(
-          servicer.SendInput,
+      'UpdateInput': grpc.unary_unary_rpc_method_handler(
+          servicer.UpdateInput,
           request_deserializer=neural__nets__pb2.ForwardMsg.FromString,
           response_serializer=neural__nets__pb2.PlainResponse.SerializeToString,
       ),
-      'BackwardDelta': grpc.unary_unary_rpc_method_handler(
-          servicer.BackwardDelta,
+      'UpdateDelta': grpc.unary_unary_rpc_method_handler(
+          servicer.UpdateDelta,
           request_deserializer=neural__nets__pb2.BackwardMsg.FromString,
           response_serializer=neural__nets__pb2.PlainResponse.SerializeToString,
       ),

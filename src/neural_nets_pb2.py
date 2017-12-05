@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='neural_nets.proto',
   package='nn',
   syntax='proto3',
-  serialized_pb=_b('\n\x11neural_nets.proto\x12\x02nn\"5\n\nForwardMsg\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x05\x12\x15\n\routput_matrix\x18\x02 \x01(\x0c\"5\n\x0b\x42\x61\x63kwardMsg\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x05\x12\x14\n\x0c\x64\x65lta_matrix\x18\x02 \x01(\x0c\" \n\rPlainResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2|\n\x11LayerDataExchange\x12\x30\n\tSendInput\x12\x0e.nn.ForwardMsg\x1a\x11.nn.PlainResponse\"\x00\x12\x35\n\rBackwardDelta\x12\x0f.nn.BackwardMsg\x1a\x11.nn.PlainResponse\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x11neural_nets.proto\x12\x02nn\"W\n\nForwardMsg\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x05\x12\x15\n\routput_matrix\x18\x02 \x01(\x0c\x12\x0e\n\x06labels\x18\x03 \x01(\x0c\x12\x10\n\x08is_train\x18\x04 \x01(\x08\"E\n\x0b\x42\x61\x63kwardMsg\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x05\x12\x14\n\x0c\x64\x65lta_matrix\x18\x02 \x01(\x0c\x12\x0e\n\x06labels\x18\x03 \x01(\x0c\" \n\rPlainResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2|\n\x11LayerDataExchange\x12\x32\n\x0bUpdateInput\x12\x0e.nn.ForwardMsg\x1a\x11.nn.PlainResponse\"\x00\x12\x33\n\x0bUpdateDelta\x12\x0f.nn.BackwardMsg\x1a\x11.nn.PlainResponse\"\x00\x62\x06proto3')
 )
 
 
@@ -46,6 +46,20 @@ _FORWARDMSG = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='labels', full_name='nn.ForwardMsg.labels', index=2,
+      number=3, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='is_train', full_name='nn.ForwardMsg.is_train', index=3,
+      number=4, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -59,7 +73,7 @@ _FORWARDMSG = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=25,
-  serialized_end=78,
+  serialized_end=112,
 )
 
 
@@ -84,6 +98,13 @@ _BACKWARDMSG = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='labels', full_name='nn.BackwardMsg.labels', index=2,
+      number=3, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -96,8 +117,8 @@ _BACKWARDMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=80,
-  serialized_end=133,
+  serialized_start=114,
+  serialized_end=183,
 )
 
 
@@ -127,8 +148,8 @@ _PLAINRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=135,
-  serialized_end=167,
+  serialized_start=185,
+  serialized_end=217,
 )
 
 DESCRIPTOR.message_types_by_name['ForwardMsg'] = _FORWARDMSG
@@ -165,12 +186,12 @@ _LAYERDATAEXCHANGE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=169,
-  serialized_end=293,
+  serialized_start=219,
+  serialized_end=343,
   methods=[
   _descriptor.MethodDescriptor(
-    name='SendInput',
-    full_name='nn.LayerDataExchange.SendInput',
+    name='UpdateInput',
+    full_name='nn.LayerDataExchange.UpdateInput',
     index=0,
     containing_service=None,
     input_type=_FORWARDMSG,
@@ -178,8 +199,8 @@ _LAYERDATAEXCHANGE = _descriptor.ServiceDescriptor(
     options=None,
   ),
   _descriptor.MethodDescriptor(
-    name='BackwardDelta',
-    full_name='nn.LayerDataExchange.BackwardDelta',
+    name='UpdateDelta',
+    full_name='nn.LayerDataExchange.UpdateDelta',
     index=1,
     containing_service=None,
     input_type=_BACKWARDMSG,
