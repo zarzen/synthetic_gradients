@@ -24,7 +24,7 @@ message ForwardMsg {
 
 message BackwardMsg {
   int32 batch_id = 1;
-  bytes delta_matrix = 2;
+  bytes partial_delta = 2;
   bytes labels = 3;
 }
 
