@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='neural_nets.proto',
   package='nn',
   syntax='proto3',
-  serialized_pb=_b('\n\x11neural_nets.proto\x12\x02nn\"W\n\nForwardMsg\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x05\x12\x15\n\routput_matrix\x18\x02 \x01(\x0c\x12\x0e\n\x06labels\x18\x03 \x01(\x0c\x12\x10\n\x08is_train\x18\x04 \x01(\x08\"E\n\x0b\x42\x61\x63kwardMsg\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x05\x12\x14\n\x0c\x64\x65lta_matrix\x18\x02 \x01(\x0c\x12\x0e\n\x06labels\x18\x03 \x01(\x0c\" \n\rPlainResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2|\n\x11LayerDataExchange\x12\x32\n\x0bUpdateInput\x12\x0e.nn.ForwardMsg\x1a\x11.nn.PlainResponse\"\x00\x12\x33\n\x0bUpdateDelta\x12\x0f.nn.BackwardMsg\x1a\x11.nn.PlainResponse\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x11neural_nets.proto\x12\x02nn\"W\n\nForwardMsg\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x05\x12\x15\n\routput_matrix\x18\x02 \x01(\x0c\x12\x0e\n\x06labels\x18\x03 \x01(\x0c\x12\x10\n\x08is_train\x18\x04 \x01(\x08\"F\n\x0b\x42\x61\x63kwardMsg\x12\x10\n\x08\x62\x61tch_id\x18\x01 \x01(\x05\x12\x15\n\rpartial_delta\x18\x02 \x01(\x0c\x12\x0e\n\x06labels\x18\x03 \x01(\x0c\" \n\rPlainResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2|\n\x11LayerDataExchange\x12\x32\n\x0bUpdateInput\x12\x0e.nn.ForwardMsg\x1a\x11.nn.PlainResponse\"\x00\x12\x33\n\x0bUpdateDelta\x12\x0f.nn.BackwardMsg\x1a\x11.nn.PlainResponse\"\x00\x62\x06proto3')
 )
 
 
@@ -92,7 +92,7 @@ _BACKWARDMSG = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='delta_matrix', full_name='nn.BackwardMsg.delta_matrix', index=1,
+      name='partial_delta', full_name='nn.BackwardMsg.partial_delta', index=1,
       number=2, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
@@ -118,7 +118,7 @@ _BACKWARDMSG = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=114,
-  serialized_end=183,
+  serialized_end=184,
 )
 
 
@@ -148,8 +148,8 @@ _PLAINRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=185,
-  serialized_end=217,
+  serialized_start=186,
+  serialized_end=218,
 )
 
 DESCRIPTOR.message_types_by_name['ForwardMsg'] = _FORWARDMSG
@@ -186,8 +186,8 @@ _LAYERDATAEXCHANGE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=219,
-  serialized_end=343,
+  serialized_start=220,
+  serialized_end=344,
   methods=[
   _descriptor.MethodDescriptor(
     name='UpdateInput',

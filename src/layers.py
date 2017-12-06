@@ -1,6 +1,7 @@
 import gzip
 import pickle as pkl
 import time
+from datetime import datetime
 
 import grpc
 import numpy as np
@@ -8,12 +9,25 @@ from sklearn.utils import shuffle
 
 import neural_nets_pb2 as nn_pb
 import neural_nets_pb2_grpc as nn_pb_grpc
+from mnist_loader import load_data
+
+
+# pylint: disable=too-many-arguments
+# pylint: disable=no-member
+
+def relu(z):
+  return np.maximum(0, z)
+
+def relu_prime(z):
+  return np.minimum(1, np.maximum(0, z))
+# pylint: enable=no-member
 
 
 class Layer(nn_pb_grpc.LayerDataExchangeServicer):
   """
   abstract layer extract common methods
   """
+  # pylint: disable=too-many-arguments
   def __init__(self, layer_name, upper_layer, lower_layer,
                lower_layer_nodes, current_layer_nodes,
                nonlin, nonlin_prime):
@@ -114,17 +128,83 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
     if load_weights is specified load the trained weights
     """
     if load_weights:
-      # TODO 
+      # TODO
       pass
     else:
       # x: lower layer nodes n
       # y: current layer nodes n
       x = self.weights_shape[1]
       y = self.weights_shape[0]
-      self.weights = np.random.randn(y, x) / np.sqrt(x) # pylint: disable=no-member 
+      self.weights = np.random.randn(y, x) / np.sqrt(x) # pylint: disable=no-member
 
 
   # implementing rpc services
+  def UpdateInput(self, request, context):
+    # implemented in Hidden Layer and Output Layer
+    pass
+
+
+  def UpdateDelta(self, request, context):
+    """ Invoked by upper layer
+    will be implemented by hidden layer
+    """
+    pass
+
+
+
+class InputLayer(Layer):
+  """ for input data"""
+
+  def __init__(self, upper_layer, data_path, input_dim, layer_name="input"):
+    super().__init__(layer_name, upper_layer,
+                     None, None, input_dim,
+                     None, None)
+
+    self.train, self.val, self.test = load_data(data_path)
+
+  def start_feed_data(self, batch_size, epochs):
+    """"""
+    #for i in range(epochs):
+
+
+  def UpdateInput(self, req, ctx):
+    """"""
+    print("Should not have lower layer")
+
+  def UpdateDelta(self, req, ctx):
+    """"""
+    batch_id = req.batch_id
+    print("Complete backpropagation for batch {} at {}".format(
+      batch_id,
+      datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+
+
+class HiddenLayer(Layer):
+  """ hidden layer"""
+
+  def __init__(self, layer_name,
+               upper_layer,
+               lower_layer,
+               lower_layer_size,
+               layer_size,
+               nonlin,
+               nonlin_prime,
+               learning_rate,
+               enable_synthetic_gradients
+               ):
+    """
+    enable_synthetic_gradients: whether use synthetic gradients
+      to do error approximating
+    """
+    super().__init__(layer_name, upper_layer,
+                     lower_layer, lower_layer_size,
+                     layer_size, nonlin,
+                     nonlin_prime)
+    self.lr = learning_rate
+    self.enable_sg = enable_synthetic_gradients
+    self.sg_weights = None
+
   def UpdateInput(self, request, context):
     """ Invoked by lower layer
     Once inputs updated, start computing the weighted sum
@@ -157,37 +237,50 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
     activations = self.nonlin(weighted_sum) # apply element wise
     self.forward_to_upper(batch_id, activations, labels, is_train)
 
+    # update weights immediately with SG, if enabled SG
+    # TODO
 
-  def UpdateDelta(self, request, context):
-    """ Invoked by upper layer
-    TODO
+
+  def UpdateDelta(self, req, ctx):
     """
+    delta shape: (batch_size, size_of_current_layer)
+    req: BackwardMsg
+    """
+    batch_id = req.batch_id
+    bytes_partial_delta = req.partial_delta
+    partial_delta = pkl.loads(bytes_partial_delta)
+    bytes_labels = req.labels # variable currently not useful
+    labels = pkl.loads(bytes_labels)
+
+    # compute delta for current layer
+    z = self.weighted_sum_inputs[batch_id]
+    z_nonlin_prime = self.nonlin_prime(z)
+
+    # shape of delta: (batch_size, size_of_layer)
+    delta = partial_delta * z_nonlin_prime
+
+    # compute partial delta for lower layer
+    partial_delta_for_lower = np.dot(delta, self.weights.transpose())
+    # send partial delta to lower layer
+    self.backward_to_lower(batch_id,
+                           partial_delta_for_lower,
+                           labels)
+
+    if self.enable_sg:
+      # TODO train the SG
+      pass
+    else:
+      # update weights regularly
+      d_shape = delta.shape
+      delta = delta.reshape(d_shape[0], d_shape[1], 1)
+      inputs = self.lower_layer_outputs[batch_id]
+      inputs_shape = inputs.shape
+      inputs = inputs.reshape(inputs_shape[0], 1, inputs_shape[1])
+      gradients = delta * inputs
+      gradients = np.mean(gradients, axis=0)
+
+      self.weights = self.weights - self.lr * gradients
 
 
-
-
-
-class InputLayer(Layer):
-  """ for input data"""
-
-  def __init__(self, upper_layer, data_path):
-    super().__init__(upper_layer, None)
-
-    self.train, self.val, self.test = self.load_data(data_path)
-
-  def start_train(self, batch_size, epochs):
-    """"""
-    #for i in range(epochs):
-
-  def load_data(self, data_path):
-    """ load mnist data, and convert labels to one hot representation"""
-    with open(data_path, 'rb') as f:
-      train, val, test = pkl.load(f)
-
-    # transform labels in training data to one hot vector
-    train_y = train[1]
-    n = len(train_y)
-    one_hot_y = np.zeros((n, 10))
-    one_hot_y[np.arange(n), train_y] = 1
-    train[1] = one_hot_y
-    return train, val, test
+    # delete stored for weighted sum
+    del self.weighted_sum_inputs[batch_id]
