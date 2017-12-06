@@ -131,6 +131,13 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
       self.weights = np.random.randn(y, x) / np.sqrt(x) # pylint: disable=no-member
 
 
+  def check_weights(self):
+    if not self.weights:
+      print("Weights of {} have not initialized".format(self.layer_name))
+      import sys
+      sys.exit(-1)
+
+
   def update_weights(self, lr, delta, outputs_of_lower):
     """
     outputs of lower: equals to inputs of this layer
@@ -144,6 +151,18 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
     gradients_avg = np.mean(gradients, axis=0)
 
     self.weights = self.weights - lr * gradients_avg
+
+
+  def parse_forward_msg(self, req):
+    """ extract and transform data in forward message"""
+    batch_id = req.batch_id
+    bytes_outputs_of_lower = req.output_matrix
+    bytes_labels = req.labels
+    is_train = req.is_train
+
+    outputs_of_lower = pkl.loads(bytes_outputs_of_lower)
+    labels = pkl.loads(bytes_labels)
+    return batch_id, outputs_of_lower, labels, is_train
 
 
   # implementing rpc services
@@ -221,19 +240,10 @@ class HiddenLayer(Layer):
     then forward outputs to next layer
     request: ForwardMsg
     """
-    if not self.weights:
-      print("Weights of {} have not initialized".format(self.layer_name))
-      import sys
-      sys.exit(-1)
+    self.check_weights()
 
     # get values from message
-    batch_id = request.batch_id
-    bytes_outputs_of_lower = request.output_matrix
-    bytes_labels = request.labels
-    is_train = request.is_train
-    # bytes to numpy array
-    outputs_of_lower = pkl.loads(bytes_outputs_of_lower)
-    labels = pkl.loads(bytes_labels)
+    batch_id, outputs_of_lower, labels, is_train = self.parse_forward_msg(request)
 
     # saving inputs
     inputs = {'matrix': outputs_of_lower,
@@ -310,13 +320,9 @@ class OutputLayer(Layer):
     """ once received input from lower layer:
     compute weighted sum -> softmax output -> loss -> back propagate
     """
-    batch_id = req.batch_id
-    bytes_outputs_of_lower = req.output_matrix
-    bytes_labels = req.labels
-    is_train = req.is_train
+    self.check_weights()
 
-    outputs_of_lower = pkl.loads(bytes_outputs_of_lower)
-    labels = pkl.loads(bytes_labels)
+    batch_id, outputs_of_lower, labels, is_train = self.parse_forward_msg(req)
 
     weighted_sum = np.dot(outputs_of_lower, self.weights)
     softmax_output = softmax(weighted_sum, axis=1)
