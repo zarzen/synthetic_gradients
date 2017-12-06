@@ -131,6 +131,21 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
       self.weights = np.random.randn(y, x) / np.sqrt(x) # pylint: disable=no-member
 
 
+  def update_weights(self, lr, delta, outputs_of_lower):
+    """
+    outputs of lower: equals to inputs of this layer
+    """
+    delta_shape = delta.shape
+    inputs_shape = outputs_of_lower.shape
+    delta = delta.reshape(delta_shape[0], delta_shape[1], 1)
+    inputs = outputs_of_lower.reshape(inputs_shape[0], 1, inputs_shape[1])
+
+    gradients = delta * inputs
+    gradients_avg = np.mean(gradients, axis=0)
+
+    self.weights = self.weights - lr * gradients_avg
+
+
   # implementing rpc services
   def UpdateInput(self, request, context):
     # implemented in Hidden Layer and Output Layer
@@ -265,15 +280,8 @@ class HiddenLayer(Layer):
       pass
     else:
       # update weights regularly
-      d_shape = delta.shape
-      delta = delta.reshape(d_shape[0], d_shape[1], 1)
       inputs = self.lower_layer_outputs[batch_id]
-      inputs_shape = inputs.shape
-      inputs = inputs.reshape(inputs_shape[0], 1, inputs_shape[1])
-      gradients = delta * inputs
-      gradients = np.mean(gradients, axis=0)
-
-      self.weights = self.weights - self.lr * gradients
+      self.update_weights(self.lr, delta, inputs)
 
 
     # delete stored for weighted sum
@@ -282,3 +290,49 @@ class HiddenLayer(Layer):
     del self.lower_layer_outputs[batch_id]
 
 
+
+class OutputLayer(Layer):
+  """ output layer
+  computing the error based on labels and prediction
+  using softmax as output activations and cross entropy loss
+
+  """
+  def __init__(self, lower_layer, lower_layer_size, num_classes, learning_rate ):
+    super().__init__("output", None,
+                     lower_layer,
+                     lower_layer_size,
+                     num_classes,
+                     None,
+                     None)
+    self.lr = learning_rate
+
+  def UpdateInput(self, req, ctx):
+    """ once received input from lower layer:
+    compute weighted sum -> softmax output -> loss -> back propagate
+    """
+    batch_id = req.batch_id
+    bytes_outputs_of_lower = req.output_matrix
+    bytes_labels = req.labels
+    is_train = req.is_train
+
+    outputs_of_lower = pkl.loads(bytes_outputs_of_lower)
+    labels = pkl.loads(bytes_labels)
+
+    weighted_sum = np.dot(outputs_of_lower, self.weights)
+    softmax_output = softmax(weighted_sum, axis=1)
+    delta = softmax_output - labels
+
+    if is_train:
+      # compute delta for lower layer first
+      # because current error is based on current weights
+      partial_delta_for_lower = np.dot(delta, self.weights.transpose())
+      # send to lower layer
+      self.backward_to_lower(batch_id, partial_delta_for_lower, labels)
+
+    # update weights
+    self.update_weights(self.lr, delta, outputs_of_lower)
+
+
+  def UpdateDelta(self, req, ctx):
+    """ No upper layer"""
+    print("Error: No upper layer for output layer")
