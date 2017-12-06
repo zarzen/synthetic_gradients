@@ -245,12 +245,13 @@ class HiddenLayer(Layer):
     # get values from message
     batch_id, outputs_of_lower, labels, is_train = self.parse_forward_msg(request)
 
-    # saving inputs
-    inputs = {'matrix': outputs_of_lower,
-              'labels': labels}
-    self.lower_layer_outputs[batch_id] = inputs
     weighted_sum = np.dot(outputs_of_lower, self.weights)
-    self.weighted_sum_inputs[batch_id] = weighted_sum
+    # saving inputs during training, because for weights updating
+    if is_train:
+      inputs = {'matrix': outputs_of_lower,
+                'labels': labels}
+      self.lower_layer_outputs[batch_id] = inputs
+      self.weighted_sum_inputs[batch_id] = weighted_sum
 
     # forward layer outputs
     activations = self.nonlin(weighted_sum) # apply element wise
@@ -334,6 +335,16 @@ class OutputLayer(Layer):
       partial_delta_for_lower = np.dot(delta, self.weights.transpose())
       # send to lower layer
       self.backward_to_lower(batch_id, partial_delta_for_lower, labels)
+
+      # cross entropy loss
+      loss = -1 * np.sum(np.log(softmax_output) * labels) / labels.shape[0] # pylint: disable=no-member
+      print("For batch id {}, loss: {}".format(batch_id, loss))
+
+    else:
+      # test evaluation
+      pred_results = np.argmax(softmax_output, axis=1)
+      matched = sum(int(y == t) for (y, t) in zip(pred_results, labels))
+      print("Performance test {0} / {1}".format(matched, labels.shape[0]))
 
     # update weights
     self.update_weights(self.lr, delta, outputs_of_lower)
