@@ -189,14 +189,35 @@ class InputLayer(Layer):
 
     self.train, self.val, self.test = load_data(data_path)
 
+
   def start_feed_data(self, batch_size, epochs):
     """"""
-    #for i in range(epochs):
+    train_X = self.train[0]
+    train_y = self.train[1]
+    val_X = self.val[0]
+    val_y = self.val[1]
+    train_size = train_X.shape[0]
+    batch_id = 0
+    test_batch_id = -1 # use negative number, diff with batch_id
+    for i in range(epochs):
+      print("Start feed {0} epoch data".format(i))
+
+      train_X, train_y = shuffle(train_X, train_y)
+      for j in range(0, train_size, batch_size):
+        minibatch_X = train_X[j:batch_size]
+        minibatch_y = train_y[j:batch_size]
+        self.forward_to_upper(batch_id, minibatch_X, minibatch_y, True)
+        batch_id += 1
+
+      # send test data for evaluation
+      self.forward_to_upper(test_batch_id, val_X[0:1000], val_y[0:1000], False)
+      test_batch_id -= 1
 
 
   def UpdateInput(self, req, ctx):
     """"""
     print("Should not have lower layer")
+
 
   def UpdateDelta(self, req, ctx):
     """"""
@@ -259,6 +280,8 @@ class HiddenLayer(Layer):
 
     # update weights immediately with SG, if enabled SG
     # TODO
+    if self.enable_sg:
+      pass
 
 
   def UpdateDelta(self, req, ctx):
