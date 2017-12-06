@@ -10,17 +10,10 @@ from sklearn.utils import shuffle
 import neural_nets_pb2 as nn_pb
 import neural_nets_pb2_grpc as nn_pb_grpc
 from mnist_loader import load_data
+from activations import *
 
 
 # pylint: disable=too-many-arguments
-# pylint: disable=no-member
-
-def relu(z):
-  return np.maximum(0, z)
-
-def relu_prime(z):
-  return np.minimum(1, np.maximum(0, z))
-# pylint: enable=no-member
 
 
 class Layer(nn_pb_grpc.LayerDataExchangeServicer):
