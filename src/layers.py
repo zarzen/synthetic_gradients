@@ -205,6 +205,7 @@ class HiddenLayer(Layer):
     self.enable_sg = enable_synthetic_gradients
     self.sg_weights = None
 
+
   def UpdateInput(self, request, context):
     """ Invoked by lower layer
     Once inputs updated, start computing the weighted sum
@@ -284,3 +285,7 @@ class HiddenLayer(Layer):
 
     # delete stored for weighted sum
     del self.weighted_sum_inputs[batch_id]
+    # delete stored for lower layer outputs
+    del self.lower_layer_outputs[batch_id]
+
+
