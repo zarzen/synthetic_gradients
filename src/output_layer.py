@@ -18,7 +18,10 @@ def main():
   # init weights
   output_layer.init_weights(None)
 
-  server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
+  MAX_MESSAGE_LENGTH = 128 * 1024 *1024
+  server = grpc.server(futures.ThreadPoolExecutor(max_workers=8), options=
+                       [('grpc.max_send_message_length', MAX_MESSAGE_LENGTH),
+                        ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH)])
   nn_pb2_grpc.add_LayerDataExchangeServicer_to_server(output_layer,
                                                       server)
   server.add_insecure_port(conf["listen_on"])

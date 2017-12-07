@@ -24,7 +24,10 @@ def main():
   # weights initialization
   hidden_layer.init_weights(None)
 
-  server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
+  MAX_MESSAGE_LENGTH = 128 * 1024 *1024
+  server = grpc.server(futures.ThreadPoolExecutor(max_workers=8), options=
+                       [('grpc.max_send_message_length', MAX_MESSAGE_LENGTH),
+                        ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH)])
   nn_pb2_grpc.add_LayerDataExchangeServicer_to_server(hidden_layer,
                                                       server)
   # listen on

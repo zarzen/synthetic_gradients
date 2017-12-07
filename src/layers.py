@@ -210,7 +210,7 @@ class InputLayer(Layer):
         batch_id += 1
 
       # send test data for evaluation
-      self.forward_to_upper(test_batch_id, val_X[0:1000], val_y[0:1000], False)
+      self.forward_to_upper(test_batch_id, val_X, val_y, False)
       test_batch_id -= 1
 
 
