@@ -74,7 +74,7 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
                        output_matrix=bytes_matrix,
                        labels=bytes_labels,
                        is_train=istrain))
-    print("get response form upper layer", res.message)
+    # print("get response form upper layer", res.message)
 
 
   def backward_to_lower(self, batch_id, partial_delta, labels):
@@ -93,9 +93,9 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
 
     res = self.lower_layer_stub.UpdateDelta(
       nn_pb.BackwardMsg(batch_id=batch_id,
-                        delta_matrix=bytes_delta,
+                        partial_delta=bytes_delta,
                         labels=bytes_labels))
-    print("get response from lower layer", res.message)
+    # print("get response from lower layer", res.message)
 
 
   def create_upper_stub(self):
@@ -116,7 +116,7 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
       print("no lower layer has been specified")
 
 
-  def init_weights(self, load_weights):
+  def init_weights(self, load_weights=None):
     """
     if load_weights is specified load the trained weights
     """
@@ -132,7 +132,7 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
 
 
   def check_weights(self):
-    if not self.weights:
+    if self.weights is None:
       print("Weights of {} have not initialized".format(self.layer_name))
       import sys
       sys.exit(-1)
@@ -204,8 +204,11 @@ class InputLayer(Layer):
 
       train_X, train_y = shuffle(train_X, train_y)
       for j in range(0, train_size, batch_size):
-        minibatch_X = train_X[j:batch_size]
-        minibatch_y = train_y[j:batch_size]
+        minibatch_X = train_X[j:j+batch_size]
+        minibatch_y = train_y[j:j+batch_size]
+        print("batch id {0}, X shape {1}, y shape {2}".format(batch_id,
+                                                              minibatch_X.shape,
+                                                              minibatch_y.shape))
         self.forward_to_upper(batch_id, minibatch_X, minibatch_y, True)
         batch_id += 1
 
@@ -269,8 +272,10 @@ class HiddenLayer(Layer):
 
     # get values from message
     batch_id, outputs_of_lower, labels, is_train = self.parse_forward_msg(request)
+    print("Get inputs id: {0}, matrix shape: {1}, labels shape: {2}".format(
+      batch_id, outputs_of_lower.shape, labels.shape))
 
-    weighted_sum = np.dot(outputs_of_lower, self.weights)
+    weighted_sum = np.dot(outputs_of_lower, self.weights.transpose())
     # saving inputs during training, because for weights updating
     if is_train:
       inputs = {'matrix': outputs_of_lower,
@@ -281,6 +286,8 @@ class HiddenLayer(Layer):
     # forward layer outputs
     activations = self.nonlin(weighted_sum) # apply element wise
     self.forward_to_upper(batch_id, activations, labels, is_train)
+    print("batch id: {0}, activations shape {1}".format(
+      batch_id, activations.shape))
 
     # update weights immediately with SG, if enabled SG
     # TODO
@@ -311,7 +318,7 @@ class HiddenLayer(Layer):
     delta = partial_delta * z_nonlin_prime
 
     # compute partial delta for lower layer
-    partial_delta_for_lower = np.dot(delta, self.weights.transpose())
+    partial_delta_for_lower = np.dot(delta, self.weights)
     # send partial delta to lower layer
     self.backward_to_lower(batch_id,
                            partial_delta_for_lower,
@@ -322,7 +329,7 @@ class HiddenLayer(Layer):
       pass
     else:
       # update weights regularly
-      inputs = self.lower_layer_outputs[batch_id]
+      inputs = self.lower_layer_outputs[batch_id]['matrix']
       self.update_weights(self.lr, delta, inputs)
 
 
@@ -342,8 +349,9 @@ class OutputLayer(Layer):
   using softmax as output activations and cross entropy loss
 
   """
-  def __init__(self, lower_layer, lower_layer_size, num_classes, learning_rate ):
-    super().__init__("output", None,
+  def __init__(self, layer_name, lower_layer, lower_layer_size,
+               num_classes, learning_rate ):
+    super().__init__(layer_name, None,
                      lower_layer,
                      lower_layer_size,
                      num_classes,
@@ -359,20 +367,26 @@ class OutputLayer(Layer):
 
     batch_id, outputs_of_lower, labels, is_train = self.parse_forward_msg(req)
 
-    weighted_sum = np.dot(outputs_of_lower, self.weights)
+    weighted_sum = np.dot(outputs_of_lower, self.weights.transpose())
     softmax_output = softmax(weighted_sum, axis=1)
-    delta = softmax_output - labels
 
     if is_train:
+      delta = softmax_output - labels
       # compute delta for lower layer first
       # because current error is based on current weights
-      partial_delta_for_lower = np.dot(delta, self.weights.transpose())
+      partial_delta_for_lower = np.dot(delta, self.weights)
       # send to lower layer
       self.backward_to_lower(batch_id, partial_delta_for_lower, labels)
 
       # cross entropy loss
-      loss = -1 * np.sum(np.log(softmax_output) * labels) / labels.shape[0] # pylint: disable=no-member
-      print("For batch id {}, loss: {}".format(batch_id, loss))
+      if batch_id % 100 == 0:
+        total_loss = np.log(softmax_output) * labels
+        print("total loss: ", np.sum(total_loss))
+        loss = -1 * np.sum(total_loss) / labels.shape[0] # pylint: disable=no-member
+        print("For batch id {}, loss: {}".format(batch_id, loss))
+
+      # update weights
+      self.update_weights(self.lr, delta, outputs_of_lower)
 
     else:
       # test evaluation
@@ -380,8 +394,6 @@ class OutputLayer(Layer):
       matched = sum(int(y == t) for (y, t) in zip(pred_results, labels))
       print("Performance test {0} / {1}".format(matched, labels.shape[0]))
 
-    # update weights
-    self.update_weights(self.lr, delta, outputs_of_lower)
 
     return nn_pb.PlainResponse(message="Inputs received at {}".format(
       self.layer_name))
