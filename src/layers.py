@@ -206,9 +206,6 @@ class InputLayer(Layer):
       for j in range(0, train_size, batch_size):
         minibatch_X = train_X[j:j+batch_size]
         minibatch_y = train_y[j:j+batch_size]
-        print("batch id {0}, X shape {1}, y shape {2}".format(batch_id,
-                                                              minibatch_X.shape,
-                                                              minibatch_y.shape))
         self.forward_to_upper(batch_id, minibatch_X, minibatch_y, True)
         batch_id += 1
 
@@ -226,9 +223,10 @@ class InputLayer(Layer):
   def UpdateDelta(self, req, ctx):
     """"""
     batch_id = req.batch_id
-    print("Complete backpropagation for batch {} at {}".format(
-      batch_id,
-      datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    if batch_id % 100 == 0:
+      print("Complete backpropagation for batch {} at {}".format(
+        batch_id,
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
     return nn_pb.PlainResponse(message="Received at layer {}".format(
       self.layer_name))
@@ -380,10 +378,10 @@ class OutputLayer(Layer):
 
       # cross entropy loss
       if batch_id % 100 == 0:
-        total_loss = np.log(softmax_output) * labels
-        print("total loss: ", np.sum(total_loss))
-        loss = -1 * np.sum(total_loss) / labels.shape[0] # pylint: disable=no-member
-        print("For batch id {}, loss: {}".format(batch_id, loss))
+        total_loss = np.log(softmax_output) * labels # pylint: disable=no-member
+        # print("total loss: ", np.sum(total_loss))
+        loss = -1 * np.sum(total_loss) / labels.shape[0]
+        print("For batch id {}, avg loss: {}".format(batch_id, loss))
 
       # update weights
       self.update_weights(self.lr, delta, outputs_of_lower)
@@ -392,7 +390,8 @@ class OutputLayer(Layer):
       # test evaluation
       pred_results = np.argmax(softmax_output, axis=1)
       matched = sum(int(y == t) for (y, t) in zip(pred_results, labels))
-      print("Performance test {0} / {1}".format(matched, labels.shape[0]))
+      print("Epoch {}, Performance test {} / {}".format(
+        -1*batch_id, matched, labels.shape[0]))
 
 
     return nn_pb.PlainResponse(message="Inputs received at {}".format(
