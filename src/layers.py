@@ -217,6 +217,7 @@ class InputLayer(Layer):
   def UpdateInput(self, req, ctx):
     """"""
     print("Should not have lower layer")
+    return nn_pb.PlainResponse(message="Wrong invoke!")
 
 
   def UpdateDelta(self, req, ctx):
@@ -225,6 +226,9 @@ class InputLayer(Layer):
     print("Complete backpropagation for batch {} at {}".format(
       batch_id,
       datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+    return nn_pb.PlainResponse(message="Received at layer {}".format(
+      self.layer_name))
 
 
 
@@ -283,6 +287,10 @@ class HiddenLayer(Layer):
     if self.enable_sg:
       pass
 
+    # return received
+    return nn_pb.PlainResponse(message="Inputs received by layer {}".format(
+      self.layer_name))
+
 
   def UpdateDelta(self, req, ctx):
     """
@@ -322,6 +330,9 @@ class HiddenLayer(Layer):
     del self.weighted_sum_inputs[batch_id]
     # delete stored for lower layer outputs
     del self.lower_layer_outputs[batch_id]
+
+    return nn_pb.PlainResponse(
+      message="Partial delta received at {}".format(self.layer_name))
 
 
 
@@ -372,7 +383,11 @@ class OutputLayer(Layer):
     # update weights
     self.update_weights(self.lr, delta, outputs_of_lower)
 
+    return nn_pb.PlainResponse(message="Inputs received at {}".format(
+      self.layer_name))
+
 
   def UpdateDelta(self, req, ctx):
     """ No upper layer"""
     print("Error: No upper layer for output layer")
+    return nn_pb.PlainResponse(message="Invalid Operation!!")
