@@ -42,6 +42,7 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
     # weights dimension
     self.weights_shape = (current_layer_nodes, lower_layer_nodes)
     self.weights = None
+    self.biases = None
 
     # record outputs from lower layer
     # use batch id as key
@@ -129,10 +130,11 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
       x = self.weights_shape[1]
       y = self.weights_shape[0]
       self.weights = np.random.randn(y, x) / np.sqrt(x) # pylint: disable=no-member
+      self.biases = np.random.randn(y, 1) # pylint: disable=no-member
 
 
   def check_weights(self):
-    if self.weights is None:
+    if self.weights is None or self.biases is None:
       print("Weights of {} have not initialized".format(self.layer_name))
       import sys
       sys.exit(-1)
@@ -144,9 +146,14 @@ class Layer(nn_pb_grpc.LayerDataExchangeServicer):
     """
     delta_shape = delta.shape
     inputs_shape = outputs_of_lower.shape
+
+    # update biases
+    avg_delta = np.mean(delta, axis=0).reshape(delta_shape[1], 1)
+    self.biases = self.biases - lr * avg_delta
+
+    # compute gradients for weights
     delta = delta.reshape(delta_shape[0], delta_shape[1], 1)
     inputs = outputs_of_lower.reshape(inputs_shape[0], 1, inputs_shape[1])
-
     gradients = delta * inputs
     gradients_avg = np.mean(gradients, axis=0)
 
@@ -273,7 +280,8 @@ class HiddenLayer(Layer):
     print("Get inputs id: {0}, matrix shape: {1}, labels shape: {2}".format(
       batch_id, outputs_of_lower.shape, labels.shape))
 
-    weighted_sum = np.dot(outputs_of_lower, self.weights.transpose())
+    weighted_sum = np.dot(outputs_of_lower, self.weights.transpose()) \
+                   + self.biases.transpose()
     # saving inputs during training, because for weights updating
     if is_train:
       inputs = {'matrix': outputs_of_lower,
@@ -365,7 +373,8 @@ class OutputLayer(Layer):
 
     batch_id, outputs_of_lower, labels, is_train = self.parse_forward_msg(req)
 
-    weighted_sum = np.dot(outputs_of_lower, self.weights.transpose())
+    weighted_sum = np.dot(outputs_of_lower, self.weights.transpose()) \
+                   + self.biases.transpose()
     softmax_output = softmax(weighted_sum, axis=1)
 
     if is_train:
