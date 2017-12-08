@@ -19,14 +19,26 @@ hidden_layer1 = {
   "lower_layer_size": 784,
   "layer_size": 500,
   "learning_rate": 0.001,
-  "enable_SG": False,
+  "enable_SG": True,
+  "sg_learning_rate": 0.0001
+}
+
+hidden_layer2 = {
+  "layer_name":"hidden2",
+  "listen_on": "[::]:50052",
+  "lower_layer" : "127.0.0.1:50051",
+  "upper_layer" : "127.0.0.1:50053",
+  "lower_layer_size": 500,
+  "layer_size": 500,
+  "learning_rate": 0.001,
+  "enable_SG": True,
   "sg_learning_rate": 0.0001
 }
 
 output_layer = {
   "layer_name": "output",
-  "listen_on": "[::]:50052",
-  "lower_layer": "127.0.0.1:50051",
+  "listen_on": "[::]:50053",
+  "lower_layer": "127.0.0.1:50052",
   "lower_layer_size": 500,
   "num_classes": 10,
   "learning_rate": 0.001

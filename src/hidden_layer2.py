@@ -1,4 +1,4 @@
-""" hidden layer 1"""
+""" hidden layer 2"""
 import time
 from concurrent import futures
 
@@ -7,16 +7,16 @@ import grpc
 import neural_nets_pb2_grpc as nn_pb2_grpc
 from activations import *
 from layers import HiddenLayer
-from layers_conf import hidden_layer1 as conf
+from layers_conf import hidden_layer2 as conf
 
 
 def main():
   """"""
-  print("{}; lr: {};SG {}; SG lr: {}; layer size: {}".format(conf["layer_name"],
-                                                             conf["learning_rate"],
-                                                             conf["enable_SG"],
-                                                             conf["sg_learning_rate"],
-                                                             conf["layer_size"]))
+  print("{}; lr: {}; SG {}; SG lr: {}; layer size: {}".format(conf["layer_name"],
+                                                              conf["learning_rate"],
+                                                              conf["enable_SG"],
+                                                              conf["sg_learning_rate"],
+  conf["layer_size"]))
   hidden_layer = HiddenLayer(conf["layer_name"],
                              conf["upper_layer"],
                              conf["lower_layer"],
