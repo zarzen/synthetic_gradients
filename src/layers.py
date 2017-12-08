@@ -251,7 +251,8 @@ class HiddenLayer(Layer):
                nonlin,
                nonlin_prime,
                learning_rate,
-               enable_synthetic_gradients
+               enable_synthetic_gradients,
+               sg_learning_rate
                ):
     """
     enable_synthetic_gradients: whether use synthetic gradients
@@ -263,7 +264,64 @@ class HiddenLayer(Layer):
                      nonlin_prime)
     self.lr = learning_rate
     self.enable_sg = enable_synthetic_gradients
+    self.sg_lr = sg_learning_rate
     self.sg_weights = None
+    self.sg_deltas = {}
+
+
+  def init_sg_weights(self):
+    """ using linear synthetic gradients model
+    SG(h, y) = hA + yB + C
+    refer to paper, Understanding synthetic gradients and decoupled neural networks
+    """
+    n = self.weights_shape[0] # size of current layer
+    # pylint: disable=no-member
+    A = np.random.randn(n, n) / np.sqrt(n)
+    B = np.random.randn(10, n) / np.sqrt(n)
+    C = np.random.randn(1, n) / np.sqrt(n)
+    # pylint: enable=no-member
+    self.sg_weights = [A, B, C]
+
+  def check_sg_weights(self):
+    if self.sg_weights is None:
+      self.init_sg_weights()
+
+
+  def SG(self, h, y):
+    """ generate delta by weighted sum and label
+
+    h: outputs of this layer
+    y: labels for this batch
+    """
+    self.check_sg_weights()
+
+    A = self.sg_weights[0] #(n, n)
+    B = self.sg_weights[1] #(10, n)
+    C = self.sg_weights[2] #(1, n)
+
+    delta = np.matmul(h, A) + np.matmul(y, B) + C
+    return delta
+
+  def update_sg_weights(self, true_delta, batch_id):
+    """ name conventions refer paper :
+       Understanding synthetic gradients and decoupled neural interface
+    """
+    sg_delta = self.sg_deltas[batch_id]
+    weighted_sum = self.weighted_sum_inputs[batch_id]
+    labels = self.lower_layer_outputs[batch_id]['labels']
+    y = labels
+
+    h = self.nonlin(weighted_sum)
+
+    Err = sg_delta - true_delta
+    A = self.sg_weights[0] - self.sg_lr * 2 * np.dot(h.transpose(), Err) / h.shape[0]
+    B = self.sg_weights[1] - self.sg_lr * 2 * np.dot(y.transpose(), Err) / y.shape[0]
+    C = self.sg_weights[2] - self.sg_lr * 2 * np.mean(Err, axis=0)
+
+    self.sg_weights = [A, B, C]
+
+    # del stored delta
+    del self.sg_deltas[batch_id]
 
 
   def UpdateInput(self, request, context):
@@ -289,16 +347,19 @@ class HiddenLayer(Layer):
       self.lower_layer_outputs[batch_id] = inputs
       self.weighted_sum_inputs[batch_id] = weighted_sum
 
-    # forward layer outputs
     activations = self.nonlin(weighted_sum) # apply element wise
+
+    # update weights immediately with SG, if enabled SG
+    if self.enable_sg and is_train:
+      print("update weights based on SG delta")
+      sg_delta = self.SG(activations, labels)
+      self.update_weights(self.lr, sg_delta, outputs_of_lower)
+      self.sg_deltas[batch_id] = sg_delta
+
+    # forward layer outputs
     self.forward_to_upper(batch_id, activations, labels, is_train)
     print("batch id: {0}, activations shape {1}".format(
       batch_id, activations.shape))
-
-    # update weights immediately with SG, if enabled SG
-    # TODO
-    if self.enable_sg:
-      pass
 
     # return received
     return nn_pb.PlainResponse(message="Inputs received by layer {}".format(
@@ -331,8 +392,8 @@ class HiddenLayer(Layer):
                            labels)
 
     if self.enable_sg:
-      # TODO train the SG
-      pass
+      # train the SG
+      self.update_sg_weights(delta, batch_id)
     else:
       # update weights regularly
       inputs = self.lower_layer_outputs[batch_id]['matrix']
@@ -376,6 +437,8 @@ class OutputLayer(Layer):
     weighted_sum = np.dot(outputs_of_lower, self.weights.transpose()) \
                    + self.biases.transpose()
     softmax_output = softmax(weighted_sum, axis=1)
+    # print("weighted sum", weighted_sum)
+    # print("outputs of lower", outputs_of_lower)
 
     if is_train:
       delta = softmax_output - labels
@@ -386,7 +449,7 @@ class OutputLayer(Layer):
       self.backward_to_lower(batch_id, partial_delta_for_lower, labels)
 
       # cross entropy loss
-      if batch_id % 100 == 0:
+      if batch_id % 1 == 0:
         total_loss = np.log(softmax_output) * labels # pylint: disable=no-member
         # print("total loss: ", np.sum(total_loss))
         loss = -1 * np.sum(total_loss) / labels.shape[0]

@@ -10,6 +10,11 @@ from layers_conf import output_layer as conf
 
 
 def main():
+
+  print("{}; lr: {}; layer size: {}".format(conf["layer_name"],
+                                            conf["learning_rate"],
+                                            conf["num_classes"]))
+
   output_layer = OutputLayer(conf["layer_name"],
                              conf["lower_layer"],
                              conf["lower_layer_size"],
