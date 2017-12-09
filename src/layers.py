@@ -449,7 +449,7 @@ class OutputLayer(Layer):
       self.backward_to_lower(batch_id, partial_delta_for_lower, labels)
 
       # cross entropy loss
-      if batch_id % 50 == 0:
+      if batch_id % 100 == 0:
         total_loss = np.log(softmax_output) * labels # pylint: disable=no-member
         # print("total loss: ", np.sum(total_loss))
         loss = -1 * np.sum(total_loss) / labels.shape[0]

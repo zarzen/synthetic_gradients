@@ -8,7 +8,7 @@ input_layer = {
   "input_dim": 784,
   "data_path": "../data/mnist.pkl.gz",
   "batch_size": 100,
-  "epochs": 5
+  "epochs": 10
 }
 
 hidden_layer1 = {
@@ -19,7 +19,7 @@ hidden_layer1 = {
   "lower_layer_size": 784,
   "layer_size": 500,
   "learning_rate": 0.001,
-  "enable_SG": True,
+  "enable_SG": False,
   "sg_learning_rate": 0.0001
 }
 
@@ -31,7 +31,7 @@ hidden_layer2 = {
   "lower_layer_size": 500,
   "layer_size": 500,
   "learning_rate": 0.001,
-  "enable_SG": True,
+  "enable_SG": False,
   "sg_learning_rate": 0.0001
 }
 
