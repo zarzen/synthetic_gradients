@@ -305,6 +305,7 @@ class HiddenLayer(Layer):
   def update_sg_weights(self, true_delta, batch_id):
     """ name conventions refer paper :
        Understanding synthetic gradients and decoupled neural interface
+       TODO: synthetic gradient estimates the partial delta instead true gradients
     """
     sg_delta = self.sg_deltas[batch_id]
     weighted_sum = self.weighted_sum_inputs[batch_id]
@@ -353,6 +354,7 @@ class HiddenLayer(Layer):
     if self.enable_sg and is_train:
       print("update weights based on SG delta")
       sg_delta = self.SG(activations, labels)
+      # TODO use sg_delta to compute the gradients by sg_delta * self.nonline_prime(z)
       self.update_weights(self.lr, sg_delta, outputs_of_lower)
       self.sg_deltas[batch_id] = sg_delta
 
@@ -393,6 +395,7 @@ class HiddenLayer(Layer):
 
     if self.enable_sg:
       # train the SG
+      # TODO pass partial delta instead
       self.update_sg_weights(delta, batch_id)
     else:
       # update weights regularly
